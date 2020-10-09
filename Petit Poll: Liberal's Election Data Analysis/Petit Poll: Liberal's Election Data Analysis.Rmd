@@ -3,8 +3,8 @@ title: "Liberal's Election Data Analysis"
 author: "Haoming Hu, Ziyu Hao, QianWen Shen, SongYuan Luo"
 date: "08/10/2020"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
