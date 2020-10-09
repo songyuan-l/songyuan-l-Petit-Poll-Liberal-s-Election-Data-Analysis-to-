@@ -1,0 +1,648 @@
+---
+title: "Liberal's Election Data Analysis"
+author: "Haoming Hu, Ziyu Hao, QianWen Shen, SongYuan Luo"
+date: "08/10/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+People only vote for the party who would fulfil them and act on their interests. That is why it is always crucial to figure out what issues people are most cared about. Also, understanding how people feel about specific policies is necessary. Thus, as a team of a Canadian polling company that is currently cooperating with the Liberal party, we had a comprehensive investigation into whether their voters are satisfied, and how their voters have changed, to help the Liberal to better serve the public and to help them better win the votes.
+
+Our data are gathered from the online questionnaires or through the phone call questions we designed, especially for collecting the citizens’ different preferences over different policies the ruling party has enacted. We conducted 370000 surveys in each of the provinces in Canada.
+
+Our surveys contain different kinds of questions. Firstly, the general questions. These consist of questions such as; “what is your gender?” and “what is your age? ” and etc. Later we used these data to investigate some possible relationships between these attributes and the party they are willing to vote for. Secondly, we asked our respondents about how satisfied they are with some laws and policies about the economic and health care and the education acted by the Liberal. For instance, how much do they benefit from the Trans Mountain pipeline project, how do they like the gun control laws, and how do they feel about the personal income tax deduction, so on and so forth. Besides, people also respond to what they voted for in the last election and what they would vote for in the next election to show the overall primary trend of people’s preferred party. By analyzing and studying all the responses, we can better understand what people like and dislike. Therefore, we can suggest to our client, The Liberal, what they should do to achieve better public satisfaction and ensure their reelection.
+
+# Executive Summary
+
+The focus of this report is to provide polling updates and deliver our studies and understanding of the data, to help bring success to our client's (the Liberal party) campaign and overall performance. 
+
+
+Our company has been involved in every step of the questionnaire development to ensure the survey is as desired as possible. Our surveys were physically mailed to 370,000 households at random and also available online with provided links for convenience. The questions were designed to gather data based on three main components:
+
+  - Respondent's satisfaction on Liberal Party’s current performance
+  - Respondent's voted behavior and respondent's turnout in the coming up election
+  - Respondent's view on some controversial topics that the Liberal party involved
+
+Data are then visualized based on the combination of our survey results and public government provided data.
+
+The satisfaction on Liberal Party’s current performance on healthcare and education are relatively high, however, the overall satisfaction has dropped due to the impact of COVID-19 pandemic. Respondent’s voting behavior also differed with past elections, while the Liberal and the Conservatives are the most popular parties among others, results have shown that more people switched their preference to Liberal in the recent elections, making Liberal Party most likely to win the following election. In terms of voter’s view controversial topics, the respondents response are as follows:
+
+  - Gun Regulation Law: 75% of the respondents supported.
+  - Sign in the NAFTA(North American Free Trade Agreement)
+      -(but most respondents opposed)
+  - Increasing the amount of CERB/CESB(prefered by liberal supporter), 
+      -(but most respondents preferred the amount to stay constant)
+  - TMP (Trans-mountain pipeline)
+      -Most of the respondents that supports trans-mountain pipeline are in favor of
+      Liberal
+
+Patterns and results can also be shown in respondent’s turnout rate based on different demographics:
+
+  - Employment status raised the issue of  “work more, vote less”.
+  - Seniors are more certain or likely to participate comparing with younger adults
+  - Eligible recent immigrants participate less than established/Canadian born citizens
+
+The above conclusions can be not only used to improve our client’s political campaign,  but also reflect on the allocation of their budget and resource. Take consideration of the above results, the Liberal Party can have a better understanding and interaction with their supporters. 
+
+The survey is conducted and sent based on random addresses within Canada, therefore we can not ensure the eligibility of our respondent. Regional difference was also not taken into the consideration, and bias can occur since it is budget-wise and time-wise impossible to gain access to all eligible voters in Canada. Also, we have no control over our respondent’s truthfulness, although we informed our respondents that it is an anonymous survey, we still can not guarantee honesty. 
+
+In future work, several things can be considered to provide a better service to our client, such as: What causes voters to change partisan affiliation? Why is the turnout rate for younger adults lower or is education correlated to the turnout rate?
+
+
+```{r, echo=FALSE,message=FALSE, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(scales)
+
+set.seed(314)
+sample_size <- 370000 # represents the total number of samples in our simulations
+
+my_data <- tibble(
+  # This variable stores how many people voted for each of the party on last election
+  party_voted_for = sample(x = c('Liberal', 'Conservative', 'New Democrat', 'Bloc', 'Green', 'Others', 'Not vote'),
+                          size = sample_size, replace = TRUE,
+                          prob = c(0.331, 0.343, 0.16, 0.076, 0.065, 0.022, 0.003)),
+  # This variable stores how many people will vote for each of the party on next election
+  party_will_vote_for = sample(x = c('Liberal', 'Conservative', 'New Democrat', 'Bloc', 'Green', 'Others', 'Not vote'),
+                           size = sample_size, replace = TRUE,
+                           prob = c(0.36, 0.31, 0.17, 0.07, 0.06, 0.02, 0.01)),
+  # This variable stores how people are likely to vote for next election
+  vote_next_election = sample(x = c('Certain to vote', 'Probably to vote', 'Probably will not vote', 
+                                    'Will not vote', 'Prefer not to say'),
+                              size = sample_size, replace = TRUE,
+                              prob = c(0.45, 0.23, 0.2, 0.1, 0.02)),
+  # This variable stores how many people are likely to support/ oppose to the
+  # TMP(Trans Mountain pipeline) project. And we leave all rows of this column 
+  # as a character for futher manipulations.
+  # tmp stands for Trans Mountain pipeline
+  tmp = 'hello'
+)
+```
+
+```{r, echo=FALSE,message=FALSE, include=FALSE}
+#Get the number of voters for each party
+Number_l<-nrow(my_data[my_data$party_will_vote_for=='Liberal',])
+Number_c<-nrow(my_data[my_data$party_will_vote_for=='Conservative',])
+Number_n<-nrow(my_data[my_data$party_will_vote_for=='New Democrat',])
+Number_b<-nrow(my_data[my_data$party_will_vote_for=='Bloc',])
+Number_g<-nrow(my_data[my_data$party_will_vote_for=='Green',])
+Number_o<-nrow(my_data[my_data$party_will_vote_for=='Others',])
+Number_nv<-nrow(my_data[my_data$party_will_vote_for=='Not vote',])
+
+#Simulating different attitudes toward the TMP project in terms of each party
+tmp_attitude <- c('support', 'oppose', 'no preference')
+tmp_attitude_l<-sample(tmp_attitude,Number_l,replace=TRUE,prob=c(0.7, 0.25, 0.05))
+tmp_attitude_c<-sample(tmp_attitude,Number_c,replace=TRUE,prob=c(0.55, 0.4, 0.05))
+tmp_attitude_n<-sample(tmp_attitude,Number_n,replace=TRUE,prob=c(0.45, 0.5, 0.05))
+tmp_attitude_b<-sample(tmp_attitude,Number_b,replace=TRUE,prob=c(0.4, 0.55, 0.05))
+tmp_attitude_g<-sample(tmp_attitude,Number_g,replace=TRUE,prob=c(0.4, 0.55, 0.05))
+tmp_attitude_o<-sample(tmp_attitude,Number_o,replace=TRUE,prob=c(0.4, 0.55, 0.05))
+tmp_attitude_nv<-sample(tmp_attitude,Number_nv,replace=TRUE,prob=c(0.45, 0.45, 0.1))
+
+#Reassign the generated attitudes back to our data set
+my_data[my_data$party_will_vote_for=='Liberal',"tmp"]<-as.character(tmp_attitude_l)
+my_data[my_data$party_will_vote_for=='Conservative',"tmp"]<-as.character(tmp_attitude_c)
+my_data[my_data$party_will_vote_for=='New Democrat',"tmp"]<-as.character(tmp_attitude_n)
+my_data[my_data$party_will_vote_for=='Bloc',"tmp"]<-as.character(tmp_attitude_b)
+my_data[my_data$party_will_vote_for=='Green',"tmp"]<-as.character(tmp_attitude_g)
+my_data[my_data$party_will_vote_for=='Others',"tmp"]<-as.character(tmp_attitude_o)
+my_data[my_data$party_will_vote_for=='Not vote',"tmp"]<-as.character(tmp_attitude_nv)
+```
+
+
+```{r, echo=FALSE,message=FALSE, include=FALSE}
+#The data set a simulated responses od different people's attitudes and preferences about different political groups and the TMP(Trans Mountain pipeline) project, we also included responces about how they likely to vote on next election. For each data we simulated, like the number of people who tend to vote for Liberal party and etc. , we have groundings in reality. 
+head(my_data)
+```
+
+# Survey Methodology
+
+The purpose of our survey is to provide our client, the Liberal Party, with an in-depth election polling for the purpose of analyzing and classifying voters. The population of the survey is chosen as all Canadian citizens who are equal or more than 18 years old and are eligible to vote. The sample frame is 370000 households selected at random since there are around 37 million Canadian citizens and we chose 1% of the whole population due to budget considerations which will be mentioned later. Our sample unit is each Canadian household. 
+
+The sampling method we used in our survey is SRSWOR(simple random sampling without replacement). It is usually used to sample a smaller size from a large population. We chose this method because it is convenient to use and it provides an accurate representation of the large population.
+
+In order for us to reach our desired respondents, we plan to obtain reliable contact information shared by Elections Canada solely as part of this research. For each targeted contact, in this case each household, we plan to distribute a survey in the form of mail. An online survey link is also included in the mail to provide respondents with a convenient option for participation.
+
+The consideration for the budget includes mailing cost, for which information obtained on the UPS website that a mail delivery fee would be about $0.4 for commercial use. Total mailing cost would be $148000 for 370000 copies of questionnaires. Labour is also required for putting questionnaires into the envelope. It is estimated that it takes 1 minute on average to prepare 3 mails, thus 2056 hours in total. The minimum wage in Ontario province is $14 per hour, therefore the total labour cost is $28980 as estimated. The online questionnaire is prepared using google form, thus no other costs are added. As will be mentioned immediately after, we decide to offer 3% of all survey participants with a $5 gift card, and ideally we would have 370000 participants, thus $55500 value of gift cards in total.
+
+A problem that we often encounter in surveying is non response and it can often cause biased, inaccurate and misleading data that would lead to false conclusions. Thus by carefully designing the survey such as including scaled questions, we can avoid potential effects that non response might bring to our survey. Besides that, we plan to offer incentives for our targets to respond. To be specific, all participants of the survey will be automatically entered into a poll and we would randomly choose 3% and offer each of them with a $5 gift card.
+
+Confedentiality is always an important consideration for surveying. We would make it clear what the data will be used for and ensure our participants that the information collected is subject to the federal Privacy Act and will be held in strict confidence. As for the online form, we would manage the data access and securely store and dispose data after publication. For privacy issues, Participants can decide to be totally anonymous by asking us to delete their email addresses. 
+
+
+# Graph sets 1
+
+
+```{r, echo=FALSE}
+# Data set only stores information about people's preferences about the TMP 
+# project and the party they will vote for. We used this concise dataset for
+# later manipulations
+tmp_set2 <- my_data %>% group_by(`tmp`, `party_will_vote_for`) %>% count()
+
+# we divide our dataset into 2 groups by their aopinions about TMP
+data_tmp_support <- tmp_set2 %>% filter(tmp == 'support')
+data_tmp_support <- data_tmp_support %>% mutate(percent = round(100*n/sum(data_tmp_support$n), 1), value = n) # Add a percentage variable on the dataset
+data_tmp_opposed <- tmp_set2 %>% filter(tmp == 'oppose')
+data_tmp_opposed <- data_tmp_opposed %>% mutate(percent = round(100*n/sum(data_tmp_opposed$n), 1), value = n) # Add a percentage variable on the dataset
+
+# Using a pie chart to illustrates for those who support the TMP, what are their prefered parties.
+tmp_support_graph<- ggplot(data_tmp_support, aes(x="", y=percent, fill=`party_will_vote_for`))+
+  geom_bar(width = 1, stat = "identity") + 
+  geom_text(aes(label = percent), size=3, position = position_stack(vjust = 0.5))
+pie_tmp_support <- tmp_support_graph + coord_polar("y", start=0)
+
+# Using a pie chart to illustrates for those who oppose the TMP, what are their prefered parties
+tmp_opposed_graph<- ggplot(data_tmp_opposed, aes(x="", y=percent, fill=`party_will_vote_for`))+
+  geom_bar(width = 1, stat = "identity") + 
+  geom_text(aes(label = percent), size=3, position = position_stack(vjust = 0.5))
+pie_tmp_opposed <- tmp_opposed_graph + coord_polar("y", start=0)
+
+# Defined theme for a more clear pie chart
+blank_theme <- theme_minimal()+
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.border = element_blank(),
+    panel.grid=element_blank(),
+    axis.ticks = element_blank(),
+    plot.title=element_text(size=14, face="bold")
+  )
+
+# We made a better pie chart to show for those who support the TMP, what are their prefered parties
+pie_tmp_support <- pie_tmp_support + blank_theme +
+  theme(axis.text.x=element_blank()) +
+  labs(fill = "TMP",
+       x = NULL,
+       y = NULL,
+       title = "Support Attitudes of different voters to TMP",
+       caption = "Source: Simulated data")
+
+# We made a better pie chart to show for those who oppose the TMP, what are their prefered parties
+pie_tmp_opposed <- pie_tmp_opposed + blank_theme +
+  theme(axis.text.x=element_blank()) +
+  labs(fill = "TMP",
+       x = NULL,
+       y = NULL,
+       title = "Opposed Attitudes of different voters to TMP",
+       caption = "Source: Simulated data")
+
+```
+
+```{r, echo=FALSE}
+# pie chart about for those who support the TMP, what are their prefered parties
+pie_tmp_support
+```
+
+```{r, echo=FALSE}
+# pie chart about for those who oppose the TMP, what are their prefered parties
+pie_tmp_opposed
+```
+
+
+
+```{r, echo=FALSE,message=FALSE, include=FALSE}
+# This variables contains which party did people vote for during last election.
+last_election_voters <- my_data %>% group_by(`party_voted_for`) %>% count()
+last_election_voters <- last_election_voters %>% mutate(percent = round(100*n/sum(last_election_voters$n), 1), value = n, year = 2019,
+                              prefered_party = party_voted_for)
+last_election_voters
+
+# This variables contains which party will people vote for on next election.
+next_election_voters <- my_data %>% group_by(`party_will_vote_for`) %>% count()
+next_election_voters <- next_election_voters %>% mutate(percent = round(100*n/sum(next_election_voters$n), 1), value = n, year = 2023, 
+                               prefered_party = party_will_vote_for)
+next_election_voters
+
+# This dataset contains two different year's election's data
+two_elections_voters <- rbind(last_election_voters, next_election_voters)
+```
+
+```{r, echo=FALSE}
+# Plot the change of each party's voters in these two elections
+change_prefered_party <- ggplot(two_elections_voters, aes(fill=as_factor(year), y=value, x=prefered_party)) + 
+  geom_bar(position="dodge", stat="identity")+ scale_y_continuous("numbers of voters", 
+                                                                  breaks=c(1000,65000,130000))+ 
+  theme(axis.text.x = element_text(angle=90, vjust = 0.5)) +
+  labs(x = NULL,
+       y = NULL,
+       title = "Change of Each Party's Voters")
+change_prefered_party
+```
+
+## Discussion of Graph sets 1
+
+The above two graphs display how people's preferences could change, given their attitude toward the TMP (Trans Mountain pipeline), supported by the Liberal Party. As we can see from the first chart, if people tend to support the TMP, they also tend to support the Liberal party, and there are almost half of the people who are going to vote for the Liberal in the next election. By contrast, only 30.3 percent of people will vote for the Conservative. However, this trend differs for those who are not in favour of the TMP. It is observed that 31.9 percent of those oppose the TMP will vote for the Conservative, which is approximately 7 percent more than whose vote for the Liberal. Therefore, we can base on these findings to suggest the Liberal to make better policies to improve the overall people's well-being. Thus the Liberal could gain more votes.
+
+For the 'Change of Each Party's Voters' bar chart, we collected all the data about each party's voters' change in these two elections. As we can see, in the last election, more people voted for the Conservative than the Liberal, and these were two parties that most people would vote for. Considering this situation, we can probably infer that many people were not satisfied with the Liberal. However, as time goes by, things have changed, more and more people respond in a way that they are willing to support the Liberal during the next election. This suggests that from the time the 2019 election was over, people favour the Liberal's behaviours. For instance, many of them are contented about the TMP project supported by the Liberal. Also, a proposal about the deduction of personal income tax enjoys much popularity.
+
+
+# Graph sets 2
+
+```{r, echo=FALSE,message=FALSE, include=FALSE}
+N=37000000 #total population
+response <- c(1,2,3,4,5) #response on a scale of 1-5
+# questions response simulation
+covid <- sample(response, N, replace = TRUE, prob=c(0.1, 0.23, 0.45, 0.15, 0.07)) 
+healthcare <- sample(response, N, replace = TRUE, prob=c(0.06, 0.13, 0.25, 0.45, 0.11)) 
+education <- sample(response, N, replace = TRUE, prob=c(0.11, 0.13, 0.33, 0.25, 0.18))
+overall <- sample(response, N, replace = TRUE, prob=c(0.11, 0.23, 0.33, 0.25, 0.08))
+#generate data frame of four questions
+mydata <- data.frame(covid,healthcare,education,overall)
+selected <-sample(1:N,370000) #srs sampling method
+srs<-mydata[selected,]
+library(tidyverse)
+require(gridExtra)
+#generate bar plots
+plot1<-ggplot(srs,aes(x=covid))+geom_bar(color="red")+labs(title="Satisfaction level on COVID-19 response")+theme(
+  plot.title = element_text(color = "red", size = 10, face = "bold"))
+plot2<-ggplot(srs,aes(x=healthcare))+geom_bar(color='red')+labs(title = "Satisfaction level on Healthcare")+theme(
+  plot.title = element_text(color = "red", size = 10, face = "bold"))
+plot3<-ggplot(srs,aes(x=education))+geom_bar(color="red")+labs(title="Satisfaction level on Education")+theme(
+  plot.title = element_text(color = "red", size = 10, face = "bold"))
+plot4<-ggplot(srs,aes(x=overall))+geom_bar(color="red")+labs(title="Overall Satisfaction level towards Liberal party")+theme(
+  plot.title = element_text(color = "red", size = 9, face = "bold"))
+
+```
+
+```{r, echo=FALSE}
+# range into 2x2
+grid.arrange(plot1,plot2,plot3,plot4,ncol=2,nrow=2)
+```
+
+## Discussion of Graph sets 2
+
+For this sets of graphs survey participants' attitude towards liberal party's performance on improving in healthcare and education, coping with COVID-19 as well as their overall satisfaction level. 
+COVID-19 has impacted our physical and mental health and has resulted in economic stagnation. Liberal party has taken steps in reacting to the unexpected pandemic. By surveying peoples' opinion on the party's performance in coping with covid-19, we can thus observe how the liberal party did in helping to improve health care system as well as boosting economy.
+For that conservative inaction has put our public health care and education system at risk, liberal party has invested billions to make sure these services have adequate funding to make a difference in peoples' lives. Thus by surveying peoples' opinion on liberal party's performance in improving health care and education, we can be better informed of our current standing and thus able to take critical next steps.
+
+The response rating is based on a scale of 1-5 with 1 being very dissatisfied and 5 being very satisfied. 
+
+The histogram for the response to the question regarding satisfaction level towards liberal party's action in coping with covid-19 shows that more than half of participants hold a neutral attitude towards liberal party's performance. It is also observed that a broad majority of participants are leaning towards the unsatisfied attitude, therefore further improvements are expected to be made in responding to COVID.
+
+We can observe an overall high satisfactory level regarding liberal party's improvements in health care. The histogram is heavily left skewed meaning that a vast majority of the participants have high satisfaction levels. The number of respondents rated 3-5 accounts for 80% of the whole sample size.
+
+As for the survey participants' attitude towards liberal party's improvements on education system, a very high satisfaction level is observed and the histogram is less severely left skewed than health care. participants who respond 3-5 accounts for almost 80% of the whole respondents population. 
+
+In align with the previous questions, an overall satisfaction level is simulated and we can observe that the histogram is leaning towards a normal distribution, which can be explained by the combination of the above three questions. Overall, people have a high satisfaction level towards liberal party's performance in improving healthcare and education, however, due to the unexpected outbreak of COVID-19, the level of satisfaction has decreased based on liberal party's reaction towards the pandemic.
+
+# Graph sets 3 
+
+```{r, echo=FALSE,message=FALSE, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(scales)
+
+
+set.seed(314)
+sample_size <- 370000
+
+my_data <- tibble(
+  party_voted_for = sample(x = c('Liberal', 'Conservative', 'New Democrat', 'Bloc', 'Green', 'Others', 'Not vote'),
+                           size = sample_size, replace = TRUE,
+                           prob = c(0.331, 0.343, 0.16, 0.076, 0.065, 0.022, 0.003)),
+  party_will_vote_for = sample(x = c('Liberal', 'Conservative', 'New Democrat', 'Bloc', 'Green', 'Others', 'Not vote'),
+                               size = sample_size, replace = TRUE,
+                               prob = c(0.36, 0.31, 0.17, 0.07, 0.06, 0.02, 0.01)),
+  vote_next_election = sample(x = c('Certain to vote', 'Probably to vote', 'Probably will not vote', 
+                                    'Will not vote', 'Prefer not to say'),
+                              size = sample_size, replace = TRUE,
+                              prob = c(0.45, 0.23, 0.2, 0.1, 0.02)),
+  gun_control_laws = 'H' #leave the space for later manipulation
+)
+
+
+#Get the number of voters for each party
+
+Number_l<-nrow(my_data[my_data$party_will_vote_for=='Liberal',])
+Number_c<-nrow(my_data[my_data$party_will_vote_for=='Conservative',])
+Number_n<-nrow(my_data[my_data$party_will_vote_for=='New Democrat',])
+Number_b<-nrow(my_data[my_data$party_will_vote_for=='Bloc',])
+Number_g<-nrow(my_data[my_data$party_will_vote_for=='Green',])
+Number_o<-nrow(my_data[my_data$party_will_vote_for=='Others',])
+Number_nv<-nrow(my_data[my_data$party_will_vote_for=='Not vote',])
+
+#Sample different attitutes toward gun control law within each party
+gun_law_attitute <- c('stongly agree', 'agree', 'no opion','disagree','strongly disagree')
+gun_law_attitute_l<-sample(gun_law_attitute,Number_l,replace=TRUE,prob=c(0.55, 0.14, 0.06, 0.16,0.09))
+gun_law_attitute_c<-sample(gun_law_attitute,Number_c,replace=TRUE,prob=c(0.35, 0.15, 0.05,0.15,0.3))
+gun_law_attitute_n<-sample(gun_law_attitute,Number_n,replace=TRUE,prob=c(0.49, 0.22, 0.03,0.1,0.16))
+gun_law_attitute_b<-sample(gun_law_attitute,Number_b,replace=TRUE,prob= c(0.46, 0.2, 0.05,0.15,0.14))
+gun_law_attitute_g<-sample(gun_law_attitute,Number_g,replace=TRUE,prob= c(0.54, 0.3, 0.04,0.07,0.05))
+gun_law_attitute_o<-sample(gun_law_attitute,Number_o,replace=TRUE,prob=c(0.52, 0.2, 0.07,0.11,0.1))
+gun_law_attitute_nv<-sample(gun_law_attitute,Number_nv,replace=TRUE,prob=c(0.6, 0.15, 0.1,0.07,0.08))
+
+
+#Reassign the generated attitutes back in our data set
+my_data[my_data$party_will_vote_for=='Liberal',"gun_control_laws"]<-as.character(gun_law_attitute_l)
+my_data[my_data$party_will_vote_for=='Conservative',"gun_control_laws"]<-as.character(gun_law_attitute_c)
+my_data[my_data$party_will_vote_for=='New Democrat',"gun_control_laws"]<-as.character(gun_law_attitute_n)
+my_data[my_data$party_will_vote_for=='Bloc',"gun_control_laws"]<-as.character(gun_law_attitute_b)
+my_data[my_data$party_will_vote_for=='Green',"gun_control_laws"]<-as.character(gun_law_attitute_g)
+my_data[my_data$party_will_vote_for=='Others',"gun_control_laws"]<-as.character(gun_law_attitute_o)
+my_data[my_data$party_will_vote_for=='Not vote',"gun_control_laws"]<-as.character(gun_law_attitute_nv)
+view(my_data)
+```
+
+```{r, echo=FALSE}
+ggplot(my_data, aes(gun_control_laws, fill = party_will_vote_for)) +
+  geom_bar(position = "dodge",color="black") +
+  labs(fill = "vote for",
+       x = 'Number of voters',
+       y = NULL,
+       title = "Chart1: Opinions of changing gun control laws by Voters",
+       caption = "Support to the govt. change the gun control laws and regulations")
+
+```
+
+
+
+
+```{r, echo=FALSE,message=FALSE, include=FALSE}
+#Sample different attitutes toward cerb within each party
+#q6
+cerb_attitute <- c('spend more', 'spend less', 'no opinion','keep it same')
+cerb_attitute_l<-sample(cerb_attitute,Number_l,replace=TRUE,prob=c(0.45, 0.15, 0.05,0.35))
+cerb_attitute_c<-sample(cerb_attitute,Number_c,replace=TRUE,prob=c(0.15, 0.45, 0.1,0.3))
+cerb_attitute_n<-sample(cerb_attitute,Number_n,replace=TRUE,prob=c(0.22, 0.33, 0.15,0.3))
+cerb_attitute_b<-sample(cerb_attitute,Number_b,replace=TRUE,prob=c(0.2, 0.3, 0.13,0.37))
+cerb_attitute_g<-sample(cerb_attitute,Number_g,replace=TRUE,prob=c(0.4, 0.21, 0.05,0.34))
+cerb_attitute_o<-sample(cerb_attitute,Number_o,replace=TRUE,prob=c(0.37, 0.18, 0.05,0.4))
+cerb_attitute_nv<-sample(cerb_attitute,Number_nv,replace=TRUE,prob=c(0.29, 0.27, 0.1,0.43))
+
+#Reassign the generated attitutes back in our data set
+my_data[my_data$party_will_vote_for=='Liberal',"cerb"]<-as.character(cerb_attitute_l)
+my_data[my_data$party_will_vote_for=='Conservative',"cerb"]<-as.character(cerb_attitute_c)
+my_data[my_data$party_will_vote_for=='New Democrat',"cerb"]<-as.character(cerb_attitute_n)
+my_data[my_data$party_will_vote_for=='Bloc',"cerb"]<-as.character(cerb_attitute_b)
+my_data[my_data$party_will_vote_for=='Green',"cerb"]<-as.character(cerb_attitute_g)
+my_data[my_data$party_will_vote_for=='Others',"cerb"]<-as.character(cerb_attitute_o)
+my_data[my_data$party_will_vote_for=='Not vote',"cerb"]<-as.character(cerb_attitute_nv)
+
+
+
+```
+
+```{r, echo=FALSE}
+ggplot(my_data, aes(cerb, fill = party_will_vote_for)) +
+  geom_bar(position = "dodge",color="black") +
+  labs(fill = "vote for",
+       x = 'Number of voters',
+       y = NULL,
+       title = "Chart2: Opinions of Govert. spending on CERB By Voters",
+       caption = "How should the Govt. spend on CERB")
+
+```
+
+
+
+
+```{r, echo=FALSE,message=FALSE, include=FALSE}
+#Sample different attitutes toward the NAFTA within each party
+nafta_attitute <- c('positive', 'neigative', 'no opinion','neither positive nor negative')
+nafta_attitute_l<-sample(nafta_attitute,Number_l,replace=TRUE,prob=c(0.55, 0.29, 0.06,0.1))
+nafta_attitute_c<-sample(nafta_attitute,Number_c,replace=TRUE,prob=c(0.25, 0.45, 0.05,0.15))
+nafta_attitute_n<-sample(nafta_attitute,Number_n,replace=TRUE,prob=c(0.25, 0.57, 0.08,0.1))
+nafta_attitute_b<-sample(nafta_attitute,Number_b,replace=TRUE,prob=c(0.15, 0.55, 0.1,0.2))
+nafta_attitute_g<-sample(nafta_attitute,Number_g,replace=TRUE,prob=c(0.1, 0.70, 0.05,0.15))
+nafta_attitute_o<-sample(nafta_attitute,Number_o,replace=TRUE,prob=c(0.12, 0.58, 0.7,0.23))
+nafta_attitute_nv<-sample(nafta_attitute,Number_nv,replace=TRUE,prob=c(0.17, 0.45, 0.1,0.18))
+
+
+#Reassign the generated attitutes back in our data set
+my_data[my_data$party_will_vote_for=='Liberal',"nafta"]<-as.character(nafta_attitute_l)
+my_data[my_data$party_will_vote_for=='Conservative',"nafta"]<-as.character(nafta_attitute_c)
+my_data[my_data$party_will_vote_for=='New Democrat',"nafta"]<-as.character(nafta_attitute_n)
+my_data[my_data$party_will_vote_for=='Bloc',"nafta"]<-as.character(nafta_attitute_b)
+my_data[my_data$party_will_vote_for=='Green',"nafta"]<-as.character(nafta_attitute_g)
+my_data[my_data$party_will_vote_for=='Others',"nafta"]<-as.character(nafta_attitute_o)
+my_data[my_data$party_will_vote_for=='Not vote',"nafta"]<-as.character(nafta_attitute_nv)
+view(my_data)
+
+```
+
+```{r, echo=FALSE}
+ggplot(my_data, aes(nafta, fill = party_will_vote_for)) +
+  geom_bar(position = "dodge",color="black") +
+  labs(fill = "vote for",
+       x = 'Number of voters',
+       y = NULL,
+       title = "Chart3: Opinions of NAFTA By Voters",
+       caption = "How NAFTA affect Canada's economy")
+```
+
+
+
+```{r, echo=FALSE,message=FALSE, include=FALSE}
+
+#Sample different attitutes toward the raise the basic personal income tax deduction within each party
+tax_attitute <- c('support', 'oppose', 'no preference')
+tax_attitute_l<-sample(tax_attitute,Number_l,replace=TRUE,prob=c(0.7, 0.15, 0.15))
+tax_attitute_c<-sample(tax_attitute,Number_c,replace=TRUE,prob=c(0.60, 0.3, 0.1))
+tax_attitute_n<-sample(tax_attitute,Number_n,replace=TRUE,prob=c(0.1, 0.75, 0.15))
+tax_attitute_b<-sample(tax_attitute,Number_b,replace=TRUE,prob=c(0.2, 0.65, 0.15))
+tax_attitute_g<-sample(tax_attitute,Number_g,replace=TRUE,prob=c(0.15, 0.80, 0.5))
+tax_attitute_o<-sample(tax_attitute,Number_o,replace=TRUE,prob=c(0.35, 0.55, 0.1))
+tax_attitute_nv<-sample(tax_attitute,Number_nv,replace=TRUE,prob=c(0.45, 0.45, 0.1))
+
+my_data[my_data$party_will_vote_for=='Liberal',"tax"]<-as.character(tax_attitute_l)
+my_data[my_data$party_will_vote_for=='Conservative',"tax"]<-as.character(tax_attitute_c)
+my_data[my_data$party_will_vote_for=='New Democrat',"tax"]<-as.character(tax_attitute_n)
+my_data[my_data$party_will_vote_for=='Bloc',"tax"]<-as.character(tax_attitute_b)
+my_data[my_data$party_will_vote_for=='Green',"tax"]<-as.character(tax_attitute_g)
+my_data[my_data$party_will_vote_for=='Others',"tax"]<-as.character(tax_attitute_o)
+my_data[my_data$party_will_vote_for=='Not vote',"tax"]<-as.character(tax_attitute_nv)
+view(my_data)
+
+```
+
+```{r, echo=FALSE}
+ggplot(my_data, aes(tax, fill = party_will_vote_for)) +
+  geom_bar(position = "dodge",color="black")+
+  labs(fill = "vote for",
+       x = 'Number of voters',
+       y = NULL,
+       title = "Chart4:Opinions of raise the basic personal income tax deduction By Voters",
+       caption = "attention on raise the basic personal income tax deduction affect Canada's economy")
+
+```
+
+## Discussion of Graph sets 3
+
+In Chart1, we present the response of "To what extent do you agree or disagree with gun control laws and regulations should be changed?" from different voters. Most people take care of their safety, and people don't want to live with gunfight nearby.  From the graph, the majority of voters choose to support The Gun Regulation Law. The liberal party has the greatest number amount voters who support the gun regulation law. Thus, the liberal party should continue in this policy.
+
+In Chart2, we analyze the opinion on "How should the government spend on CERB (Canada Emergency Response Benefit), and CESB  (Canada Emergency Student Benefit)?"Should the government spend more, less, or the same amount of money on CERB OR CESB?Form the graph, The largest number of voters who want the government to spend more on CERB is the liberal party's voter, and The largest number of voters who want the government to spend less on CERB is the conservative party's voter. However, the number of voters who want to keep spending the same is the highest amount of all the choices. Both the Liberal Party and the Conservative party have many of their voters want to keep the CERB spending the same. So, the Liberal party should consider more about the policy change on CERB.
+
+In Chart3, we collected all the data about each party’s voters’ response to "How does NAFTA (North American Free Trade Agreement) affect Canada's economy".Most of the Liberal party's voters believe the NAFTA has a positive effect on Canada's economy. But the majority of the voters keep a negative view on the effect of NFTA. Also, there are many voters who in favor of the Liberal party think NAFTA affects Canada's economy negatively. This result could help the government reconsider the NAFTA policy. Maybe the policymaker can negotiate with the US for a better trade agreement.
+
+In Chart4, we analyze the responses of "To what extent do you agree or disagree with raise the basic personal income tax deduction?" .As we can see from the graph, both Liberal and Conservative parties have the majority of their voters advocating to raise the basic personal income tax deduction. Both NDP and Green parties have the majority of their voters opposing for raising the basic personal income tax deduction. But, most voters choose to agree to raise the basic personal income tax deduction. Thus, the policymaker should push this policy forward. Also, the government could consider reducing other kinds of tax.
+
+# Graph sets 4 
+
+```{r generating dataset, echo=FALSE,warning=FALSE, message=FALSE}
+sample_size = 370000
+my_data <- tibble(participationdist = sample(x = c('Certain', 'Most likely', 'Probably will not', 'Will not'),size = sample_size, replace = TRUE, prob = c(0.45, 0.24, 0.20, 0.11 )), AgeGroup = 'hello')
+```
+
+```{r participation, echo=FALSE,warning=FALSE, message=FALSE}
+# get the number of row for each participating category
+N_ce <- nrow(my_data[my_data$participationdist=='Certain',])
+N_mo <- nrow(my_data[my_data$participationdist=='Most likely',])
+N_pr <- nrow(my_data[my_data$participationdist=='Probably will not',])
+N_wi <- nrow(my_data[my_data$participationdist=='Will not',])
+```
+
+```{r employment,echo=FALSE,warning=FALSE, message=FALSE}
+# simulate employment data based on Statistics Canada, this data is dependent on turnout rate
+employment <- c('Employed40-', 'Employed40+')
+emce <-sample(employment,N_ce,replace=TRUE,prob=c(0.55,0.45))
+emmo <-sample(employment,N_mo,replace=TRUE,prob=c(0.62, 0.38))
+empr <-sample(employment,N_pr,replace=TRUE,prob=c(0.46, 0.54))
+emwi <-sample(employment,N_wi,replace=TRUE,prob=c(0.3,0.7 ))
+#Reassign the generated data back in our data set
+my_data[my_data$participationdist=='Certain',"Employment"]<-as.character(emce)
+my_data[my_data$participationdist=='Most likely',"Employment"]<-as.character(emmo)
+my_data[my_data$participationdist=='Probably will not',"Employment"]<-as.character(empr)
+my_data[my_data$participationdist=='Will not',"Employment"]<-as.character(emwi)
+# Create a subset based on employment group and this age group's turnout rate
+employment_set <- my_data %>% group_by(Employment, participationdist) %>% count() %>% mutate(percent = round(100*n/sample_size, 2))
+
+# this graph will show the number of people in each employment group and their likelihood of voting in the next election
+employmentdist <- ggplot(data = employment_set, aes(x = participationdist, y = n, fill = Employment)) +
+    geom_col(stat = "count") +labs(x = "Employment Distribution",
+       y = "Number of voter", title = "Chart 1: Employment Status") +
+  geom_text(aes(label = paste0(percent(employment_set$percent))), 
+            position = position_stack(vjust = 0.5), size = 2)
+
+employmentdist
+```
+
+```{r Age,echo=FALSE,warning=FALSE, message=FALSE}
+# simulate age data based on Statistics canada, this data is dependent on turnout rate
+age <- c('18-34', '35-44', '45-54','55-64','65-74','Above 74')
+agece <-sample(age,N_ce,replace=TRUE,prob=c(0.06, 0.09, 0.1, 0.35, 0.3, 0.1))
+agemo <-sample(age,N_mo,replace=TRUE,prob=c(0.06, 0.08, 0.1,0.3,0.34,0.12))
+agepr <-sample(age,N_pr,replace=TRUE,prob=c(0.3, 0.34, 0.11,0.06,0.04,0.15))
+agewi <-sample(age,N_wi,replace=TRUE,prob=c(0.3, 0.2, 0.,0.07,0.08, 0.3))
+#Reassign the generated data back in our data set
+my_data[my_data$participationdist=='Certain',"AgeGroup"]<-as.character(agece)
+my_data[my_data$participationdist=='Most likely',"AgeGroup"]<-as.character(agemo)
+my_data[my_data$participationdist=='Probably will not',"AgeGroup"]<-as.character(agepr)
+my_data[my_data$participationdist=='Will not',"AgeGroup"]<-as.character(agewi)
+```
+```{r agedist plot,echo=FALSE,warning=FALSE, message=FALSE}
+# Create a subset based on age group and this age group's turnout rate
+age_set <- my_data %>% group_by(AgeGroup, participationdist) %>% count() %>%
+  mutate(percent = round(100*n/sample_size, 2))
+# this graph will show the number of people in each group and their likelihood of voting in the next election
+agedist <- ggplot(data = age_set, aes(x = participationdist, y = n, fill = AgeGroup)) +
+    geom_col(stat = "count") +labs(x = "Age Distribution",
+       y = "Number of voter", title = "Chart 2: Age") +
+  geom_text(aes(label = paste0(percent,"%")), 
+            position = position_stack(vjust = 0.5), size = 2)
+
+agedist
+```
+
+```{r Immigrants distribution,echo=FALSE,warning=FALSE, message=FALSE}
+# simulate gender data based on Statistics Canada, this data is dependent on turnout rate
+imm <- c('Recent', 'Established/Born')
+immce <-sample(imm,N_ce,replace=TRUE,prob=c(0.39, 0.61))
+immmo <-sample(imm,N_mo,replace=TRUE,prob=c(0.47, 0.53))
+immpr <-sample(imm,N_pr,replace=TRUE,prob=c(0.68, 0.32))
+immwi <-sample(imm,N_wi,replace=TRUE,prob=c(0.58, 0.42))
+#Reassign the generated data back in our data set
+my_data[my_data$participationdist=='Certain',"ImmigrantStatus"]<-as.character(immce)
+my_data[my_data$participationdist=='Most likely',"ImmigrantStatus"]<-as.character(immmo)
+my_data[my_data$participationdist=='Probably will not',"ImmigrantStatus"]<-as.character(immpr)
+my_data[my_data$participationdist=='Will not',"ImmigrantStatus"]<-as.character(immwi)
+```
+
+```{r immigration distribution plot, echo=FALSE,warning=FALSE, message=FALSE}
+# Create a subset based on gender group and this age group's turnout rate
+imm_set <- my_data %>% group_by(ImmigrantStatus, participationdist) %>% count() %>% mutate(percent = round(100*n/sample_size, 2))
+
+
+# this graph will show the number of people in each gender group and their likelihood of voting in the next election
+immdist <- ggplot(data = imm_set, aes(x = participationdist, y = n, fill = ImmigrantStatus)) +
+    geom_col(stat = "count") +labs(x = "ImmigrantStatus Distribution",
+       y = "Number of voter", title = "Chart 3: Immigration") +
+  geom_text(aes(label = paste0(percent,"%")), 
+            position = position_stack(vjust = 0.5), size = 2)
+
+immdist
+```
+
+## Discussion of Graph sets 4
+
+Voter's turnout rate can be expressed in many ways, but for the purpose of this report, we designed our survey questions that categorized our respondents into four categories, respondents that are "Certain to vote", "Most likely to vote", "Probably won't vote", and "I won't participate". These categories are then interpreted as the following factors that are associated with voting, "Age","Gender",and "Employment Status". These factors are important such that it distinguishes our client's supporter. Depending on the turnout rates from different factor groups, our client can have a better understanding of the civic engagement, and therefore propose better representative constituencies that persuades voters.  
+
+Looking at the Chart1: Employment Status. Depending on the respondent's employment status, a pattern can also be recognized(Chart 2). Respondents working less than 40 hours per week are more likely to vote than those working 40 hours or more per week. It seems working hours per week is negatively correlated with voting. This data identified a "work more, vote less" issue for our client.
+
+For Chart2: Age. Age is an important factor associated with voting participation.From Chart 3, it seems like participation increases with age, and seniors are more certain or likely to participate comparing with younger adults. However interestingly, a marked decline in participation after age 75. Our client can take the age distribution into consideration when designing their campaign targeting specific age group.
+
+Chart3: Immigration visualized the participation likelihood between eligible recent immigrated citizens and established/canadian born citizens] and some insights can be gained by examining the above differences. As Canada is a country that embraces multiculturalism and immigrants, immigration status is another divisive political factor that could affect the voting pattern. Similar in many other studies, the chart has shown that eligible recent immigrants participate less than established/Canadian born citizens, and reasons may range from unfamiliarity, lack of confidence or trust or practiced a difference political culture(U.S. Census Bureau 2010; Milan 2005).
+
+# Results
+
+We can figure out some conclusions from our findings: The more hours people work per week, the less likely they will participate in the voting; Senior people are prone to vote than their younger counterparts. We can tell more than 75 percent of the people are against NAFTA, though many Liberal voters favour this law in terms of the gun control law. For the relationships between the Trans Mountain pipeline and the Different party's voters, it is clear that the Liberal voters tend to support this project. Moreover, these years, more and more people have more confidence in the Liberal, since more people vote for them. We can suggest the Liberal keep conducting projects such as the Trans Mountain pipeline and release the tension about the gun control a little to win the opponents' votes. And it is excellent to enact some policies which aim to help the elders. If the Federal accepts these suggestions, they are likely to make a better society and keep their positions for more terms. 
+
+# Weakness
+
+The most obvious weakness of the dataset is the fact that not all respondents are not eligible to take the survey. That is some respondents are not our targeted respondents. Since we are mailing the survey to those addresses we randomly picked, we don't the respondent is eligible to vote or not. For example, a teenager who is under minimum voting age fills out the survey by mistake or just for fun (We never know what teenagers' idea). Also, in the survey, we didn't ask a question about the respondents' nationality, so new immigrants, the visa holders, the permanent residents, and even tourists could fill out the survey. For this incidence, there is no realistic way to do the identification check. Thus we can only assume all respondents who fill out the survey are our targeted respondents.
+Also, another weakness is the answers to the survey are highly dependent on respondents' truthfulness. In other words, lies would affect the dataset's accuracy. Questions like 'Which one of the age groups are you in?' would be easy to lie on it, especially for some people who have high sensitivity to privacy. In this case, we could only assume all respondents are honest.
+Furthermore, there will be some missing data and duplicated data. Respondents may skip some questions. It will affect us analyzing the support rate of each party.
+
+# Appendices
+
+1. The link to our survey is: (https://docs.google.com/forms/d/1C1gec0GVf73jZwmUh55aM53bZQwC5RcdzrtTA_gh-qE/edit?ts=5f7a4ae2&gxids=7628)
+
+2. You can find our codes in:
+(https://github.com/songyuan-l/how_can_the_liberal_gain_more_votes/tree/main/Petit%20Poll:%20Liberal's%20Election%20Data%20Analysis)
+
+```{r surveyshot, echo=False}
+knitr::include_graphics('pic1.png')
+knitr::include_graphics('pic2.png')
+
+knitr::include_graphics('pic3.png')
+
+knitr::include_graphics('pic4.png')
+
+knitr::include_graphics('pic5.png')
+
+knitr::include_graphics('pic6.png')
+
+knitr::include_graphics('pic7.png')
+
+
+```
+# References
+
+1. Opposition to Trans Mountain pipeline expansion spikes 11 percentage points, survey suggests | CBC News. (2020, January 28):
+[https://www.cbc.ca/news/canada/calgary/tmx-poll-opinion-support-opposition-pipeline-trans-mountain-calgary-alberta-1.5443092](https://www.cbc.ca/news/canada/calgary/tmx-poll-opinion-support-opposition-pipeline-trans-mountain-calgary-alberta-1.5443092)
+
+2. Election Canada. Forty-third general election 2019:
+[https://www.elections.ca/res/rep/off/ovr2019app/51/table9E.html](https://www.elections.ca/res/rep/off/ovr2019app/51/table9E.html)
+
+3. CBC News Canada Poll Tracker. (n.d.):
+[https://newsinteractives.cbc.ca/elections/poll-tracker/canada/](https://newsinteractives.cbc.ca/elections/poll-tracker/canada/)
+
+4. Voter Turnout at Federal Elections and Referendums. (2020, May 12):
+[https://www.elections.ca/content.aspx?section=ele&dir=turn&document=index&lang=e](https://www.elections.ca/content.aspx?section=ele&dir=turn&document=index&lang=e)
+
+5. Wickham et al., (2019). Welcome to the tidyverse. Journal of Open Source Software, 4(43),
+  1686, (https://doi.org/10.21105/joss.01686)
+  
+6. H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York, 2016.
+
+7. Hadley Wickham and Dana Seidel (2020). scales: Scale Functions for Visualization. R package
+  version 1.1.1. (https://CRAN.R-project.org/package=scales)
+  
+8. Baptiste Auguie (2017). gridExtra: Miscellaneous Functions for "Grid" Graphics. R package
+  version 2.3. (https://CRAN.R-project.org/package=gridExtra)
